@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger;
  * @author fcastillo
  */
 public class EmailManager {
-
+    
     private static final Logger LOG = LogManager.getLogger(EmailManager.class);
 
     /**
@@ -31,9 +31,9 @@ public class EmailManager {
     public static boolean enviarTextoPlano(String asunto, String remitente, String destinatario, String mensaje, Properties properties) {
         
         boolean enviado = false;
-
+        
         try {
-
+            
             Session session = Session.getInstance(properties, new javax.mail.Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -43,23 +43,101 @@ public class EmailManager {
                     );
                 }
             });
-
+            
             Message message = new MimeMessage(session);
-
+            
             message.setFrom(new InternetAddress(remitente));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinatario));
             message.setSubject(asunto);
             message.setText(mensaje);
-
+            
             Transport.send(message);
-
+            
             enviado = true;
             
         } catch (MessagingException e) {
             
             LOG.error("Ocurrió un error y no pudo enviarse el mail." + e);
         }
+        
+        return enviado;
+    }
 
+    /**
+     *
+     * @param to dirección de correo de los destintarios principales
+     * @param cc direcciones de correo publicas
+     * @param bcc direcciones de correo privadas
+     * @param asunto asunto del mensaje
+     * @param remitente dirección de correo de quien envia el mensaje
+     * @param mensaje cuerpo del mensaje
+     * @param properties configuración de credenciales
+     * @return true si el mensaje fue enviado, caso contrario false
+     */
+    public static boolean enviarConCopia(String[] to, String[] cc, String[] bcc, String asunto, String remitente, String mensaje, Properties properties) {
+        
+        boolean enviado = false;
+        
+        try {
+            
+            Session session = Session.getInstance(properties, new javax.mail.Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(
+                            properties.getProperty("mail.smtp.user"),
+                            properties.getProperty("mail.smtp.password")
+                    );
+                }
+            });
+            
+            Message message = new MimeMessage(session);
+
+            // Destinatarios principales
+            if (to != null) {
+                
+                InternetAddress[] addressTO = new InternetAddress[to.length];
+                
+                for (int i = 0; i < to.length; i++) {
+                    addressTO[i] = new InternetAddress(to[i]);
+                    message.addRecipient(Message.RecipientType.TO, addressTO[i]);
+                }
+            }
+
+            // Copias publicas
+            if (cc != null) {
+                
+                InternetAddress[] addressCC = new InternetAddress[cc.length];
+                
+                for (int i = 0; i < cc.length; i++) {
+                    addressCC[i] = new InternetAddress(cc[i]);
+                    message.addRecipient(Message.RecipientType.CC, addressCC[i]);
+                }
+            }
+
+            // Copias privadas
+            if (bcc != null) {
+                
+                InternetAddress[] addressBCC = new InternetAddress[bcc.length];
+                
+                for (int i = 0; i < bcc.length; i++) {
+                    addressBCC[i] = new InternetAddress(bcc[i]);
+                    message.addRecipient(Message.RecipientType.BCC, addressBCC[i]);
+                }
+            }
+            
+            message.setFrom(new InternetAddress(remitente));
+            message.setSubject(asunto);
+            message.setText(mensaje);
+            
+            Transport.send(message);
+            
+            enviado = true;
+            
+        } catch (MessagingException e) {
+            
+            LOG.error("Ocurrió un error y no se pudo enviar el mail " + e);
+            
+        }
         return enviado;
     }
 }
