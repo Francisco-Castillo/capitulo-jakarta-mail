@@ -1,5 +1,6 @@
 package com.fcastillo.jakarta.mail.textoplano;
 
+import com.fcastillo.jakarta.mail.general.EmailManager;
 import java.time.LocalDate;
 import java.util.Properties;
 import org.apache.logging.log4j.LogManager;

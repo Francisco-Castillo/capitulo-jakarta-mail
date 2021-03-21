@@ -1,5 +1,11 @@
-package com.fcastillo.jakarta.mail.textoplano;
+package com.fcastillo.jakarta.mail.general;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -179,7 +185,7 @@ public class EmailManager {
             if (archivos != null) {
 
                 for (String archivo : archivos) {
-                    
+
                     // Componemos la parte de archivos
                     MimeBodyPart bodyPartArchivos = new MimeBodyPart();
 
@@ -213,4 +219,72 @@ public class EmailManager {
 
     }
 
+    public static boolean enviarHTML(String asunto, String remitente, String destinatario,
+            Map<String, String> parametros, String rutaPlantilla, Properties properties) {
+
+        boolean enviado = false;
+
+        try {
+            Session session = Session.getInstance(properties, new javax.mail.Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(
+                            properties.getProperty("mail.smtp.user"),
+                            properties.getProperty("mail.smtp.password")
+                    );
+                }
+            });
+
+            String message;
+
+            MimeMessage mimeMessage = new MimeMessage(session);
+            mimeMessage.setFrom(new InternetAddress(remitente));
+
+            InternetAddress[] internetAddresses = {new InternetAddress(destinatario)};
+
+            mimeMessage.setRecipients(Message.RecipientType.TO, internetAddresses);
+            mimeMessage.setSubject(asunto);
+
+            Multipart multipart = new MimeMultipart();
+
+            InputStream inputStream = new FileInputStream(rutaPlantilla);
+
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String strLine;
+
+            StringBuffer msjHTML = new StringBuffer();
+
+            while ((strLine = bufferedReader.readLine()) != null) {
+                msjHTML.append(strLine);
+            }
+
+            MimeBodyPart mimeBodyPart = new MimeBodyPart();
+
+            message = msjHTML.toString();
+
+            Iterator<Map.Entry<String, String>> it = parametros.entrySet().iterator();
+
+            while (it.hasNext()) {
+                Map.Entry<String, String> entry = it.next();
+                message = message.replace(entry.getKey(), entry.getValue());
+            }
+
+            mimeBodyPart.setContent(message, "text/html");
+
+            multipart.addBodyPart(mimeBodyPart);
+
+            mimeMessage.setContent(multipart);
+
+            Transport.send(mimeMessage, mimeMessage.getAllRecipients());
+
+            enviado = true;
+
+        } catch (Exception e) {
+
+            LOG.error("Ocurrió un error y no pudo enviarse el mensaje " + e);
+        }
+
+        return enviado;
+    }
 }
